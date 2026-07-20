@@ -556,11 +556,24 @@ body{
     <div class="launch-brand">RINK<span class="dot">•</span>SIDE</div>
     <div class="launch-sub">Choose your team</div>
     <div class="launch-list" id="launchTeamList"></div>
-    <div class="launch-list">
-      <div class="field" style="margin-bottom:8px;">
-        <input id="launchNewTeamName" type="text" placeholder="New team name, e.g. U12 Bruins" />
+    <div class="launch-list" id="launchSignInWrap">
+      <div class="checklist-card" style="margin-bottom:14px;">
+        <div class="checklist-title">Your RinkSide account</div>
+        <div class="checklist-sub" id="launchAcctCopy">New here? Create a free account so your teams and stats follow you on every phone, tablet, and computer. Already have one? Sign in below.</div>
+        <div class="field" style="margin-bottom:8px;"><input id="launchUser" type="text" placeholder="Username (lowercase, no spaces)" autocomplete="username" /></div>
+        <div class="field" style="margin-bottom:10px;"><input id="launchPass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password" /></div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="accountSubmit('register','launchUser','launchPass')">Create Account</button>
+          <button class="btn btn-outline" style="flex:1;" onclick="accountSubmit('login','launchUser','launchPass')">Sign In</button>
+        </div>
       </div>
-      <button class="btn btn-primary btn-block" onclick="launchCreateTeam()">+ Create New Team</button>
+    </div>
+    <div class="launch-list" id="launchTeamCreateWrap">
+      <div class="divider-text" id="launchTeamDivider">Set up your first team</div>
+      <div class="field" style="margin-bottom:8px;">
+        <input id="launchNewTeamName" type="text" placeholder="Team name, e.g. U12 Bruins" />
+      </div>
+      <button class="btn btn-primary btn-block" id="launchCreateBtn" onclick="launchCreateTeam()">+ Create Team</button>
     </div>
   </div>
 
@@ -1205,26 +1218,33 @@ async function testAccountServer(){
   }
 }
 
-async function accountSubmit(mode){
-  const u = document.getElementById('acctUser').value.trim();
-  const p = document.getElementById('acctPass').value;
+async function accountSubmit(mode, userFieldId, passFieldId){
+  const uEl = document.getElementById(userFieldId || 'acctUser');
+  const pEl = document.getElementById(passFieldId || 'acctPass');
+  const u = uEl.value.trim();
+  const p = pEl.value;
   if(!u || !p){ showToast('Enter a username and password.'); return; }
   if(!isHostedSite()){ showToast('Accounts work on your hosted (Netlify) app.'); return; }
   showToast(mode==='register' ? 'Creating account…' : 'Signing in…');
   try{
     const out = await api({ action: mode, username: u, password: p });
     setAuth({ token: out.token, username: out.username });
-    document.getElementById('acctPass').value = '';
+    pEl.value = '';
     if(mode==='register'){
       await api({ action:'push', token: out.token, data: buildSnapshot() }); // seed account with this device's data
-      showToast('Account created — this device is now syncing.');
+      showToast('Welcome, ' + out.username + '! Your account is syncing.');
     } else {
       const had = await cloudPullAndApply();
-      showToast(had ? 'Signed in — loading your data…' : 'Signed in.');
+      showToast(had ? 'Welcome back — loading your teams…' : 'Signed in.');
       if(had){ setTimeout(()=>location.reload(), 700); return; }
       scheduleCloudPush();
     }
     renderAccountCard();
+    // If the welcome screen is open, refresh it so the flow continues to team setup
+    const launch = document.getElementById('launchOverlay');
+    if(launch && !launch.classList.contains('hidden')){
+      showLaunchPicker(lastKnownTeamId);
+    }
   }catch(e){
     showToast(e.message || 'That didn\'t work — try again.');
     dbg('ACCOUNT ' + mode + ' failed: ' + (e.message||e));
@@ -1388,6 +1408,20 @@ function showLaunchPicker(lastTeamId){
     };
     list.appendChild(row);
   });
+  // Account card front and center whenever this device isn't signed in
+  const siWrap = document.getElementById('launchSignInWrap');
+  const auth = getAuth();
+  if(!auth){
+    siWrap.classList.remove('hidden');
+    document.getElementById('launchAcctCopy').textContent = teams.length
+      ? 'Sign in to load your account, or create one to start syncing this device\'s teams everywhere.'
+      : 'New here? Create a free account so your teams and stats follow you on every phone, tablet, and computer. Already have one? Sign in below.';
+  } else {
+    siWrap.classList.add('hidden');
+  }
+  document.getElementById('launchTeamDivider').textContent = teams.length
+    ? 'Or add another team'
+    : (auth ? 'Set up your first team' : 'Or skip for now — set up a team on this device only');
   overlay.classList.remove('hidden');
 }
 
