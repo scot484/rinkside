@@ -236,7 +236,10 @@ body{
 /* Stats table */
 .stats-table{ width:100%; border-collapse: collapse; font-size:12.5px; }
 .stats-table th, .stats-table td{ padding: 9px 6px; text-align:center; border-bottom: 1px solid var(--border); }
-.stats-table th{ font-family:'Oswald'; font-weight:600; letter-spacing:0.5px; color: var(--ice-dim); cursor:pointer; user-select:none; }
+.stats-table th{ font-family:'Oswald'; font-weight:600; letter-spacing:0.5px; color: var(--ice-dim); cursor:pointer; user-select:none; white-space:nowrap; }
+.stats-table th .sort-arrow{ font-size:9px; margin-left:2px; }
+.stats-table th.sorted{ color: var(--ice-blue); }
+.stats-table th:hover{ color: var(--ice); }
 .stats-table th:first-child, .stats-table td:first-child{ text-align:left; }
 .stats-table tbody tr:hover{ background: var(--surface); }
 .stats-table td:first-child{ font-weight:600; }
@@ -2171,6 +2174,31 @@ function computeSeasonStats(){
 
 let statsSortKey = 'points';
 let statsSortDir = -1;
+let playerSortMode = 'num_asc'; // num_asc | num_desc | name_asc | name_desc
+let gSortKey = 'sv';
+let gSortDir = -1;
+
+function sortStats(key){
+  if(key==='name'){
+    if(statsSortKey!=='name'){ statsSortKey='name'; playerSortMode='num_asc'; }
+    else {
+      const order = ['num_asc','num_desc','name_asc','name_desc'];
+      playerSortMode = order[(order.indexOf(playerSortMode)+1) % order.length];
+    }
+  } else {
+    if(statsSortKey===key) statsSortDir *= -1; else { statsSortKey = key; statsSortDir = -1; }
+  }
+  renderStats();
+}
+function sortGoalies(key){
+  if(gSortKey===key) gSortDir *= -1; else { gSortKey = key; gSortDir = -1; }
+  renderStats();
+}
+function playerHeaderLabel(){
+  if(statsSortKey!=='name') return 'Player';
+  return { num_asc:'Player <span class="sort-arrow"># ▲</span>', num_desc:'Player <span class="sort-arrow"># ▼</span>',
+           name_asc:'Player <span class="sort-arrow">A ▲</span>', name_desc:'Player <span class="sort-arrow">A ▼</span>' }[playerSortMode];
+}
 
 /* Deterministic insight cards — priority-ranked rules, no AI (per Phase Zero) */
 function computeInsights(){
@@ -2241,7 +2269,12 @@ async function renderStats(){
   const rows = all.filter(r=>r.player.position!=='G');
   const goalies = all.filter(r=>r.player.position==='G');
   if(statsSortKey==='name'){
-    rows.sort((a,b)=> (Number(a.player.number)-Number(b.player.number)) * -statsSortDir );
+    rows.sort((a,b)=>{
+      if(playerSortMode==='num_asc') return Number(a.player.number)-Number(b.player.number);
+      if(playerSortMode==='num_desc') return Number(b.player.number)-Number(a.player.number);
+      if(playerSortMode==='name_asc') return a.player.name.localeCompare(b.player.name);
+      return b.player.name.localeCompare(a.player.name);
+    });
   } else {
     rows.sort((a,b)=> ((a[statsSortKey]||0)-(b[statsSortKey]||0)) * statsSortDir );
   }
@@ -2252,7 +2285,12 @@ async function renderStats(){
   if(level==='full'){ cols.push({key:'faceoff_won', label:'FOW'}, {key:'faceoff_lost', label:'FOL'}, {key:'hit', label:'HIT'}, {key:'block', label:'BLK'}); }
 
   let html = '<table class="stats-table"><thead><tr>';
-  cols.forEach(c=>{ html += `<th onclick="sortStats('${c.key}')">${c.label}</th>`; });
+  cols.forEach(c=>{
+    const active = statsSortKey===c.key;
+    const label = c.key==='name' ? playerHeaderLabel()
+      : c.label + (active ? `<span class="sort-arrow">${statsSortDir===-1?'▼':'▲'}</span>` : '');
+    html += `<th class="${active?'sorted':''}" onclick="sortStats('${c.key}')">${label}</th>`;
+  });
   html += '</tr></thead><tbody>';
   rows.forEach(r=>{
     html += '<tr>';
@@ -2271,12 +2309,26 @@ async function renderStats(){
   if(goalies.length){
     gTitle.classList.remove('hidden');
     gWrap.classList.remove('hidden');
-    let gh = '<table class="stats-table"><thead><tr><th>Goalie</th><th>GP</th><th>SA</th><th>SV</th><th>GA</th><th>SV%</th></tr></thead><tbody>';
-    goalies.sort((a,b)=> (b.shot_against+b.goal_against) - (a.shot_against+a.goal_against)).forEach(r=>{
-      const sa = r.shot_against + r.goal_against; // total shots faced
-      const sv = r.shot_against;                   // shots that didn't go in
-      const svp = sa ? (sv / sa) : null;
-      gh += `<tr><td>#${r.player.number} ${escapeHtml(r.player.name)}</td><td>${r.gp}</td><td>${sa}</td><td>${sv}</td><td>${r.goal_against}</td><td>${svp===null?'—':'.'+String(Math.round(svp*1000)).padStart(3,'0')}</td></tr>`;
+    const gRows = goalies.map(r=>{
+      const sa = r.shot_against + r.goal_against;
+      return { ...r, sa, sv: r.shot_against, svp: sa ? r.shot_against/sa : -1 };
+    });
+    const gCols = [{key:'gname', label:'Goalie'}, {key:'gp', label:'GP'}, {key:'sa', label:'SA'}, {key:'sv', label:'SV'}, {key:'goal_against', label:'GA'}, {key:'svp', label:'SV%'}];
+    if(gSortKey==='gname'){
+      gRows.sort((a,b)=> a.player.name.localeCompare(b.player.name) * -gSortDir );
+    } else {
+      gRows.sort((a,b)=> ((a[gSortKey]||0)-(b[gSortKey]||0)) * gSortDir );
+    }
+    let gh = '<table class="stats-table"><thead><tr>';
+    gCols.forEach(c=>{
+      const active = gSortKey===c.key;
+      const label = c.label + (active ? `<span class="sort-arrow">${gSortDir===-1?'▼':'▲'}</span>` : '');
+      gh += `<th class="${active?'sorted':''}" onclick="sortGoalies('${c.key}')">${label}</th>`;
+    });
+    gh += '</tr></thead><tbody>';
+    gRows.forEach(r=>{
+      const svpTxt = r.svp<0?'—':'.'+String(Math.round(r.svp*1000)).padStart(3,'0');
+      gh += `<tr><td>#${r.player.number} ${escapeHtml(r.player.name)}</td><td>${r.gp}</td><td>${r.sa}</td><td>${r.sv}</td><td>${r.goal_against}</td><td>${svpTxt}</td></tr>`;
     });
     gh += '</tbody></table>';
     gWrap.innerHTML = gh;
@@ -2284,10 +2336,6 @@ async function renderStats(){
     gTitle.classList.add('hidden');
     gWrap.classList.add('hidden');
   }
-}
-function sortStats(key){
-  if(statsSortKey===key) statsSortDir *= -1; else { statsSortKey = key; statsSortDir = -1; }
-  renderStats();
 }
 
 /* ---------------- Games ---------------- */
