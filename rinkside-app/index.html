@@ -240,7 +240,8 @@ body{
 .stats-table th .sort-arrow{ font-size:9px; margin-left:2px; }
 .stats-table th.sorted{ color: var(--ice-blue); }
 .stats-table th:hover{ color: var(--ice); }
-.stats-table th:first-child, .stats-table td:first-child{ text-align:left; }
+.stats-table th:first-child, .stats-table td:first-child,
+.stats-table th:nth-child(2), .stats-table td:nth-child(2){ text-align:left; }
 .stats-table tbody tr:hover{ background: var(--surface); }
 .stats-table td:first-child{ font-weight:600; }
 .table-wrap{ overflow-x:auto; border-radius:12px; border:1px solid var(--border); }
@@ -462,6 +463,22 @@ body{
 
 .hidden{ display:none !important; }
 
+/* Control labels */
+.ctrl-label{ font-family:'Oswald'; font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ice-dim); margin: 2px 0 6px; }
+.ctrl-hint{ font-family:'Inter'; text-transform:none; letter-spacing:0; font-size:10.5px; opacity:0.8; margin-left:6px; }
+
+/* Next game strip in header */
+.sb-next{ display:flex; align-items:center; justify-content:center; gap:8px; padding: 9px 0 2px; cursor:pointer; }
+.sb-next .lbl{ font-family:'Oswald'; font-size:10px; letter-spacing:2px; color:var(--ice-blue); }
+.sb-next .txt{ font-size:13px; font-weight:600; }
+.sb-next .when{ font-size:12px; color:var(--ice-dim); }
+
+/* Accessibility */
+:focus-visible{ outline: 2px solid var(--ice-blue); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
 .toast{
   position:fixed; left:50%; bottom:78px; transform: translateX(-50%) translateY(10px);
   background: var(--surface-2); border:1px solid var(--border-strong); color: var(--ice);
@@ -608,11 +625,11 @@ body{
   <!-- Roster screen -->
   <div class="screen" id="screen-roster">
     <div id="checklistWrap"></div>
-    <div class="section-title">Roster</div>
+    <div class="section-title">Roster <span id="rosterSummary" style="font-family:'Inter'; text-transform:none; letter-spacing:0; font-weight:500; margin-left:6px;"></span></div>
     <div id="rosterGrid" class="roster-grid"></div>
     <div id="rosterEmpty" class="empty-state hidden">
-      <div class="big">No players yet</div>
-      <div>Add your first player to start tracking.</div>
+      <div class="big">Build your bench</div>
+      <div>Add jersey numbers and names — it takes about a minute. Tap Save &amp; Add Another to fly through the roster.</div>
     </div>
     <div class="fab-row">
       <button class="btn btn-primary btn-block" onclick="openPlayerModal()">+ Add Player</button>
@@ -667,20 +684,24 @@ body{
     </div>
 
     <div id="liveActive" class="hidden">
+      <div class="ctrl-label">Period</div>
       <div class="period-row" id="periodRow"></div>
+      <div class="ctrl-label">Situation <span class="ctrl-hint">EV · Power Play · Penalty Kill · Empty Net</span></div>
       <div class="period-row" id="situationRow"></div>
       <div class="undo-bar">
-        <button class="btn btn-neutral" onclick="undoLastEvent()">↩ Undo Last</button>
-        <button class="btn btn-goal" onclick="adjustOppScore(1)">+ Opp Goal</button>
+        <button class="btn btn-neutral" onclick="undoLastEvent()" aria-label="Undo last stat">↩ Undo</button>
+        <button class="btn btn-primary" onclick="adjustTeamScore(1)" aria-label="Add team goal by an untracked player">+ Team Goal</button>
+        <button class="btn btn-goal" onclick="adjustOppScore(1)" aria-label="Add opponent goal">+ Opp Goal</button>
       </div>
+      <div class="ctrl-hint" style="margin:-6px 0 14px; color:var(--ice-dim);">Only tracking your kid? Use + Team Goal for teammates' goals so the score stays right.</div>
       <div class="section-title">Tap a Stat</div>
       <div id="liveRosterGrid" class="roster-grid"></div>
-      <div class="fab-row">
-        <button class="btn btn-danger btn-block" onclick="endGame()">End Game</button>
-      </div>
       <div class="event-feed">
         <div class="section-title">Event Feed</div>
         <div id="eventFeed"></div>
+      </div>
+      <div class="fab-row" style="margin-top:22px;">
+        <button class="btn btn-outline btn-block" onclick="endGame()">🏁 End Game &amp; See Recap</button>
       </div>
     </div>
   </div>
@@ -693,8 +714,8 @@ body{
     <div class="section-title hidden" id="goalieStatsTitle" style="margin-top:20px;">Goalies</div>
     <div id="goalieStatsWrap" class="table-wrap hidden"></div>
     <div id="statsEmpty" class="empty-state hidden">
-      <div class="big">No stats yet</div>
-      <div>Play a game to see stats here.</div>
+      <div class="big">Stats start with your first game</div>
+      <div>Go Live from the Live tab, tap stats as they happen, and this page fills itself in — leaders, trends, and the full sheet.</div>
     </div>
   </div>
 
@@ -703,8 +724,8 @@ body{
     <div class="section-title">Game Log</div>
     <div id="gamesList"></div>
     <div id="gamesEmpty" class="empty-state hidden">
-      <div class="big">No games logged</div>
-      <div>Start a live game to build your history.</div>
+      <div class="big">No games yet</div>
+      <div>Every finished game lands here with a shareable recap and milestones.</div>
     </div>
   </div>
 
@@ -713,14 +734,13 @@ body{
     <div class="section-title">Account &amp; Sync</div>
     <div class="setting-card import-card">
       <div id="acctSignedOut">
-        <div class="setting-desc">Create a free account to sync your teams, stats, and preferences across devices. Everyone in the family can have their own login. (Works on your hosted app.)</div>
-        <div class="field"><input id="acctUser" type="text" placeholder="Username" autocomplete="username" /></div>
+        <div class="setting-desc">Create a free account so your teams and stats follow you to every phone, tablet, and computer. Everyone in the family can have their own login.</div>
+        <div class="field"><input id="acctUser" type="text" placeholder="Username (lowercase, no spaces)" autocomplete="username" /></div>
         <div class="field"><input id="acctPass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password" /></div>
         <div style="display:flex; gap:10px;">
-          <button class="btn btn-primary" style="flex:1;" onclick="accountSubmit('login')">Sign In</button>
-          <button class="btn btn-outline" style="flex:1;" onclick="accountSubmit('register')">Create Account</button>
+          <button class="btn btn-primary" style="flex:1;" onclick="accountSubmit('register')">Create Account</button>
+          <button class="btn btn-outline" style="flex:1;" onclick="accountSubmit('login')">Sign In</button>
         </div>
-        <button class="btn btn-outline btn-block" style="margin-top:10px;" onclick="testAccountServer()">Test Connection</button>
       </div>
       <div id="acctSignedIn" class="hidden">
         <div class="setting-desc" id="accountStatus" style="color:var(--shot-teal); margin-bottom:12px;"></div>
@@ -728,9 +748,8 @@ body{
       </div>
     </div>
 
-    <div class="section-title">Team</div>
+    <div class="section-title">Teams</div>
     <div class="setting-card">
-      <div class="setting-label">Your Teams</div>
       <div id="teamsListSettings" style="margin-bottom:12px;"></div>
       <div class="field" style="margin-bottom:8px;">
         <input id="newTeamName" type="text" placeholder="New team name, e.g. U12 Bruins" />
@@ -738,56 +757,45 @@ body{
       <button class="btn btn-outline btn-block" onclick="addTeam()">+ Add Team</button>
     </div>
 
-    <div class="section-title">Import Schedule</div>
+    <div class="section-title">Schedule Sync</div>
     <div class="setting-card import-card">
-      <div class="setting-label">From TeamSnap — Live Sync</div>
+      <div class="setting-label">TeamSnap</div>
       <div class="setting-desc">
-        In TeamSnap: Schedule → Sync Calendar / Export → copy the <b>subscribe link</b> (starts with webcal:// or https://) and paste it here. On your hosted app, the schedule re-syncs automatically every time you open it — new games appear, changed times update.
+        In TeamSnap: Schedule → Sync Calendar / Export → copy the <b>subscribe link</b> and paste it here. Games sync automatically every time you open the app; practices are filtered out.
       </div>
       <div class="field">
         <input id="teamsnapUrl" type="text" placeholder="webcal://ical-cdn.teamsnap.com/team_schedule/....ics" />
       </div>
       <button class="btn btn-primary btn-block" onclick="saveAndSyncTeamSnap()">Save Link &amp; Sync Now</button>
       <div class="setting-desc" id="tsSyncStatus" style="margin:8px 0 0; color:var(--shot-teal);"></div>
-      <div class="divider-text">or import manually</div>
-      <div class="field">
-        <label>Upload .ics file</label>
-        <input id="icsFileInput" type="file" accept=".ics,text/calendar,text/plain" onchange="handleIcsFile(this)" />
-      </div>
-      <div class="field">
-        <label>Paste calendar text</label>
-        <textarea id="icsPasteArea" placeholder="Starts with BEGIN:VCALENDAR"></textarea>
-      </div>
-      <button class="btn btn-outline btn-block" onclick="importPastedIcs()">Import Pasted Text</button>
+      <details style="margin-top:12px;">
+        <summary style="cursor:pointer; color:var(--ice-dim); font-size:12.5px;">Import a calendar file instead</summary>
+        <div class="field" style="margin-top:10px;">
+          <label>Upload .ics file</label>
+          <input id="icsFileInput" type="file" accept=".ics,text/calendar,text/plain" onchange="handleIcsFile(this)" />
+        </div>
+        <div class="field">
+          <label>Paste calendar text</label>
+          <textarea id="icsPasteArea" placeholder="Starts with BEGIN:VCALENDAR"></textarea>
+        </div>
+        <button class="btn btn-outline btn-block" onclick="importPastedIcs()">Import Pasted Text</button>
+      </details>
     </div>
 
-    <div class="section-title">Stat Detail Level</div>
+    <div class="section-title">Stat Detail</div>
     <div class="setting-card">
-      <div class="setting-desc">Choose how much detail to log during games. You can change this anytime.</div>
+      <div class="setting-desc">How much you log during games. Start with Standard; switch anytime.</div>
       <div class="option-row" id="statLevelOptions">
         <div class="option-pill" data-level="basic">Basic</div>
         <div class="option-pill" data-level="standard">Standard</div>
         <div class="option-pill" data-level="full">Full Sheet</div>
       </div>
+      <div class="setting-desc" style="margin:10px 0 0; font-size:11.5px;">Basic: goals &amp; assists. Standard: adds shots, penalties, special teams. Full: adds faceoffs, hits, blocks.</div>
     </div>
 
-    <div class="section-title">Sharing</div>
-    <div class="setting-card">
-      <div class="toggle-row">
-        <div>
-          <div class="setting-label" style="margin-bottom:2px;">Shared Tracking</div>
-          <div class="setting-desc" style="margin-bottom:0;">Other people using this app in Claude can add stats to the same game — updates merge in every few seconds. (Not available in the home-screen version, which saves to each phone separately.)</div>
-        </div>
-        <div class="toggle" id="sharingToggle" onclick="toggleSharing()"><div class="knob"></div></div>
-      </div>
-      <div class="warn-box" id="sharingWarn">
-        Shared data is visible to and editable by anyone who opens this app — not just you. Turn this on only if you want other trackers to see and add stats.
-      </div>
-    </div>
-
-    <div class="section-title">Backup &amp; Restore</div>
+    <div class="section-title">Backup</div>
     <div class="setting-card import-card">
-      <div class="setting-desc">Tap Export to turn all your data (teams, rosters, games, schedule) into text. Copy it somewhere safe like Notes. To restore, paste it back here and tap Restore.</div>
+      <div class="setting-desc">Export turns everything (teams, rosters, games, schedule) into text you can save in Notes. Paste it back and tap Restore to bring it all back.</div>
       <textarea id="backupArea" placeholder="Backup text appears here after Export — or paste a saved backup to Restore."></textarea>
       <div style="display:flex; gap:10px; margin-top:10px;">
         <button class="btn btn-outline" style="flex:1;" onclick="exportBackup()">Export &amp; Copy</button>
@@ -795,15 +803,33 @@ body{
       </div>
     </div>
 
-    <div class="section-title">Debug Log</div>
-    <div class="setting-card import-card">
-      <div class="setting-desc">If something isn't working (like an import), tap Copy Log and paste it into your chat with Claude so it can pinpoint the problem.</div>
-      <textarea id="debugLogView" readonly placeholder="Nothing logged yet. Try the action that failed, then come back here."></textarea>
-      <div style="display:flex; gap:10px; margin-top:10px;">
-        <button class="btn btn-outline" style="flex:1;" onclick="copyDebugLog()">Copy Log</button>
-        <button class="btn btn-outline" style="flex:1;" onclick="clearDebugLog()">Clear</button>
+    <details style="margin-top:6px;">
+      <summary class="section-title" style="cursor:pointer; list-style:none;">Advanced ›</summary>
+
+      <div class="setting-card" style="margin-top:10px;">
+        <div class="toggle-row">
+          <div>
+            <div class="setting-label" style="margin-bottom:2px;">Shared Tracking (Claude preview only)</div>
+            <div class="setting-desc" style="margin-bottom:0;">Lets other people using the Claude preview version add stats to the same game. Not used by the home-screen app.</div>
+          </div>
+          <div class="toggle" id="sharingToggle" onclick="toggleSharing()"><div class="knob"></div></div>
+        </div>
+        <div class="warn-box" id="sharingWarn">
+          Shared data is visible to and editable by anyone who opens this app — not just you.
+        </div>
       </div>
-    </div>
+
+      <div class="setting-card import-card">
+        <div class="setting-label">Diagnostics</div>
+        <div class="setting-desc">If something isn't working, tap Test Connection or Copy Log and send the result to Claude.</div>
+        <button class="btn btn-outline btn-block" style="margin-bottom:10px;" onclick="testAccountServer()">Test Account Server</button>
+        <textarea id="debugLogView" readonly placeholder="Nothing logged yet."></textarea>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <button class="btn btn-outline" style="flex:1;" onclick="copyDebugLog()">Copy Log</button>
+          <button class="btn btn-outline" style="flex:1;" onclick="clearDebugLog()">Clear</button>
+        </div>
+      </div>
+    </details>
   </div>
 
   <!-- Bottom nav -->
@@ -835,11 +861,11 @@ body{
     <div class="modal-title" id="playerModalTitle">Add Player</div>
     <div class="field">
       <label>Jersey Number</label>
-      <input id="playerNumber" type="number" min="0" max="99" placeholder="e.g. 17" />
+      <input id="playerNumber" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="99" placeholder="e.g. 17" />
     </div>
     <div class="field">
       <label>Name</label>
-      <input id="playerName" type="text" placeholder="e.g. Jack Miller" />
+      <input id="playerName" type="text" placeholder="e.g. Jack Miller" autocomplete="off" />
     </div>
     <div class="field">
       <label>Position</label>
@@ -854,6 +880,7 @@ body{
       <button class="btn btn-danger hidden" id="deletePlayerBtn" onclick="deleteCurrentPlayer()">Delete</button>
       <button class="btn btn-primary" onclick="savePlayer()">Save</button>
     </div>
+    <button class="btn btn-neutral btn-block hidden" id="saveNextBtn" style="margin-top:10px;" onclick="savePlayer(true)">Save &amp; Add Another →</button>
   </div>
 </div>
 
@@ -905,6 +932,22 @@ body{
       <div class="recap-team"><div class="nm" id="rcOppName"></div><div class="sc" id="rcOppScore"></div></div>
     </div>
     <div class="recap-result"><span class="result-badge" id="rcResult"></span> <span style="font-size:12px; color:var(--ice-dim);" id="rcDate"></span></div>
+    <details id="rcFixScore" style="margin:-8px 0 8px; text-align:center;">
+      <summary style="cursor:pointer; color:var(--ice-dim); font-size:12px; list-style:none;">Score wrong? Fix it ›</summary>
+      <div style="display:flex; justify-content:center; gap:18px; margin-top:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:var(--ice-dim);">US</span>
+          <button class="btn btn-neutral" style="padding:8px 14px;" onclick="fixScore('team',-1)">−</button>
+          <button class="btn btn-neutral" style="padding:8px 14px;" onclick="fixScore('team',1)">+</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:var(--ice-dim);">THEM</span>
+          <button class="btn btn-neutral" style="padding:8px 14px;" onclick="fixScore('opp',-1)">−</button>
+          <button class="btn btn-neutral" style="padding:8px 14px;" onclick="fixScore('opp',1)">+</button>
+        </div>
+      </div>
+      <div style="font-size:11px; color:var(--ice-dim); margin-top:8px;">Adds or removes untracked goals. Player stats are never changed.</div>
+    </details>
     <div id="rcMilestonesWrap" class="hidden">
       <div class="recap-section">🏅 Milestones</div>
       <div id="rcMilestones"></div>
@@ -922,7 +965,12 @@ body{
       <div id="rcStory"></div>
     </div>
     <div class="recap-actions">
-      <button class="btn btn-primary btn-block" onclick="closeRecap()">Done</button>
+      <button class="btn btn-primary btn-block" onclick="shareRecap()">📤 Share Recap</button>
+      <button class="btn btn-outline btn-block" onclick="closeRecap()">Done</button>
+      <div style="display:flex; gap:10px; margin-top:6px;">
+        <button class="btn btn-neutral" style="flex:1; font-size:12.5px;" onclick="recapEventLog()">Full event log</button>
+        <button class="btn btn-neutral" style="flex:1; font-size:12.5px; color:var(--goal-red);" onclick="recapDelete()">Delete game</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1383,12 +1431,26 @@ async function init(){
   renderAll();
   showScreen('roster');
   lastKnownTeamId = lastTeamId;
-  document.getElementById('splashOverlay').classList.remove('hidden');
+  const splash = document.getElementById('splashOverlay');
+  splash.classList.remove('hidden');
+  // Returning user with a remembered team: brief branded moment, then straight in.
+  // New or signed-out users get the full welcome flow.
+  const returning = !!(lastTeamId && teams.find(t=>t.id===lastTeamId));
+  if(returning){
+    splash.querySelector('.splash-enter').textContent = 'Opening…';
+    setTimeout(async ()=>{
+      if(splash.classList.contains('hidden')) return; // user already tapped
+      splash.classList.add('hidden');
+      await enterTeam(lastTeamId);
+    }, 1100);
+  }
 }
 
 let lastKnownTeamId = null;
 function enterFromSplash(){
   document.getElementById('splashOverlay').classList.add('hidden');
+  const returning = !!(lastKnownTeamId && teams.find(t=>t.id===lastKnownTeamId));
+  if(returning){ enterTeam(lastKnownTeamId); return; }
   showLaunchPicker(lastKnownTeamId);
 }
 
@@ -1401,7 +1463,7 @@ function showLaunchPicker(lastTeamId){
     row.className = 'launch-team';
     row.innerHTML = `<span class="team-main"><span>${escapeHtml(t.name)}</span>` +
       (t.id===lastTeamId ? '<span class="last-badge">LAST USED</span>' : '') +
-      `</span><span class="team-del">✕</span>`;
+      `</span><span class="team-del" role="button" aria-label="Remove team">✕</span>`;
     row.onclick = async ()=>{ await enterTeam(t.id); };
     const del = row.querySelector('.team-del');
     if(del) del.onclick = async (e)=>{
@@ -1457,7 +1519,7 @@ async function enterTeam(teamId){
   document.getElementById('launchOverlay').classList.add('hidden');
   renderTeamPicker();
   renderAll();
-  showScreen(activeGame ? 'live' : 'roster');
+  showScreen(activeGame ? 'live' : (roster.length ? 'live' : 'roster'));
   startSharedSync();
   renderTsSyncStatus();
   syncFromTeamSnap(false); // background schedule refresh on hosted version
@@ -1558,11 +1620,30 @@ function updateScoreboard(){
     dot.classList.add('show');
   } else {
     live.classList.add('hidden');
-    idle.classList.toggle('hidden', teams.length>0);
-    if(teams.length){
+    dot.classList.remove('show');
+    if(!teams.length){
+      idle.classList.remove('hidden');
+      idle.textContent = 'Add a team to get started';
+      idle.className = 'sb-idle';
+      idle.onclick = null;
+      return;
+    }
+    // Now/Next: surface the next scheduled game right in the header
+    const now = Date.now();
+    const next = scheduleGames.slice()
+      .filter(s=> new Date(s.dateTime).getTime() > now - 3*60*60*1000)
+      .sort((a,b)=> new Date(a.dateTime) - new Date(b.dateTime))[0];
+    if(next){
+      const d = new Date(next.dateTime);
+      const isToday = d.toDateString()===new Date().toDateString();
+      const when = (isToday ? 'Today' : d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'})) + ' · ' + fmtTime(d);
+      idle.className = 'sb-next';
+      idle.innerHTML = `<span class="lbl">${isToday?'TODAY':'NEXT'}</span><span class="txt">vs ${escapeHtml(next.opponent)}</span><span class="when">${when}</span>`;
+      idle.onclick = ()=>showScreen('live');
+      idle.classList.remove('hidden');
+    } else {
       idle.classList.add('hidden');
     }
-    dot.classList.remove('show');
   }
 }
 
@@ -1612,9 +1693,14 @@ function renderRoster(){
   grid.innerHTML = '';
   if(!currentTeamId || roster.length===0){
     empty.classList.remove('hidden');
+    const sum0 = document.getElementById('rosterSummary'); if(sum0) sum0.textContent='';
     return;
   }
   empty.classList.add('hidden');
+  const nG = roster.filter(p=>p.position==='G').length;
+  const nS = roster.length - nG;
+  const sum = document.getElementById('rosterSummary');
+  if(sum) sum.textContent = `· ${nS} skater${nS===1?'':'s'}${nG?`, ${nG} goalie${nG===1?'':'s'}`:''}`;
   roster.slice().sort((a,b)=>a.number-b.number).forEach(p=>{
     const card = document.createElement('div');
     card.className = 'player-card';
@@ -1629,6 +1715,7 @@ function openPlayerModal(id){
   editingPlayerId = id || null;
   document.getElementById('playerModalTitle').textContent = id ? 'Edit Player' : 'Add Player';
   document.getElementById('deletePlayerBtn').classList.toggle('hidden', !id);
+  document.getElementById('saveNextBtn').classList.toggle('hidden', !!id);
   if(id){
     const p = roster.find(r=>r.id===id);
     document.getElementById('playerNumber').value = p.number;
@@ -1643,12 +1730,15 @@ function openPlayerModal(id){
 }
 function closePlayerModal(){ document.getElementById('playerModal').classList.add('hidden'); }
 
-async function savePlayer(){
+async function savePlayer(addAnother){
   if(!currentTeamId){ showToast('Add a team first, in the Settings tab.'); return; }
   const number = document.getElementById('playerNumber').value.trim();
   const name = document.getElementById('playerName').value.trim();
   const position = document.getElementById('playerPosition').value;
   if(!name || number===''){ showToast('Enter a name and jersey number.'); return; }
+  if(!editingPlayerId && roster.some(r=>String(r.number)===String(number))){
+    showToast('#' + number + ' is already taken on this roster.'); return;
+  }
   if(editingPlayerId){
     const p = roster.find(r=>r.id===editingPlayerId);
     p.number = number; p.name = name; p.position = position;
@@ -1656,9 +1746,16 @@ async function savePlayer(){
     roster.push({ id: uid(), number, name, position });
   }
   await storeSet('roster:'+currentTeamId, roster, settings.sharing);
-  closePlayerModal();
   renderRoster();
   renderLive();
+  if(addAnother){
+    showToast('Added #' + number + ' ' + name);
+    document.getElementById('playerNumber').value = '';
+    document.getElementById('playerName').value = '';
+    document.getElementById('playerNumber').focus();
+    return;
+  }
+  closePlayerModal();
 }
 async function deleteCurrentPlayer(){
   if(!editingPlayerId) return;
@@ -1786,7 +1883,7 @@ function renderRecentGamesMini(){
     const div = document.createElement('div');
     div.className = 'game-card';
     div.style.marginBottom = '8px';
-    div.onclick = ()=>openGameDetail(g.id);
+    div.onclick = ()=>openRecapForGame(g.id);
     div.innerHTML = `<div class="game-top"><span class="game-opp">vs ${escapeHtml(g.opponent)}</span><span class="game-score">${g.teamScore}–${g.oppScore}</span></div><div class="game-date">${g.date}</div>`;
     wrap.appendChild(div);
   });
@@ -1944,6 +2041,7 @@ function renderLiveRoster(){
 }
 
 async function quickLog(playerId, type){
+  try{ if(navigator.vibrate) navigator.vibrate(type==='goal'||type==='goal_against' ? [30,40,30] : 15); }catch(e){}
   statModalPlayerId = playerId;
   await logEventDirect(type);
   const tally = document.getElementById('tally-'+playerId);
@@ -1999,6 +2097,24 @@ function flipScore(elId){
   setTimeout(()=>el.classList.remove('flip'), 150);
 }
 
+async function adjustTeamScore(delta){
+  if(!activeGame) return;
+  if(delta > 0){
+    activeGame.events.push({ id: uid(), playerId: null, type:'goal', period: currentPeriod, situation: currentSituation, en: emptyNet, ts: Date.now() });
+  } else {
+    let i = activeGame.events.length-1;
+    for(; i>=0; i--){ if(activeGame.events[i].type==='goal' && activeGame.events[i].playerId===null) break; }
+    if(i<0){ showToast('No untracked team goals to remove. Use the feed ✕ to remove a player goal.'); return; }
+    activeGame.events.splice(i,1);
+  }
+  events = activeGame.events;
+  recomputeScores(activeGame);
+  await storeSet('games:'+currentTeamId, games, settings.sharing);
+  flipScore('sbTeamScore');
+  renderEventFeed();
+  updateScoreboard();
+}
+
 async function adjustOppScore(delta){
   if(!activeGame) return;
   if(delta > 0){
@@ -2026,7 +2142,7 @@ function renderEventFeed(){
   }
   events.slice().reverse().forEach(ev=>{
     const p = roster.find(r=>r.id===ev.playerId);
-    const who = ev.playerId===null ? 'Opponent' : (p ? '#'+p.number+' '+escapeHtml(p.name) : '#? Unknown');
+    const who = ev.playerId===null ? (ev.type==='opp_goal' ? 'Opponent' : 'Team (untracked player)') : (p ? '#'+p.number+' '+escapeHtml(p.name) : '#? Unknown');
     const row = document.createElement('div');
     row.className = 'event-item';
     const sit = (ev.situation && ev.situation!=='EV') ? `<span class="event-tag ${ev.situation==='PP'?'tag-assist':'tag-penalty'}">${ev.situation}</span>` : '';
@@ -2034,7 +2150,7 @@ function renderEventFeed(){
     row.innerHTML = `<span class="event-tag ${statTagClass(ev.type)}">${statLabel(ev.type)}</span>${sit}${enb}
       <span>${who}</span>
       <span style="color:var(--ice-dim); font-size:11px;">${ev.period}</span>
-      <span class="event-del" onclick="deleteEvent('${ev.id}')">✕</span>`;
+      <span class="event-del" role="button" aria-label="Remove this event" onclick="deleteEvent('${ev.id}')">✕</span>`;
     feed.appendChild(row);
   });
 }
@@ -2080,6 +2196,8 @@ async function endGame(){
 function showRecap(gameId, newMilestones){
   const g = games.find(x=>x.id===gameId);
   if(!g) return;
+  currentRecapGameId = gameId;
+  currentRecapMilestones = newMilestones || [];
   const team = teams.find(t=>t.id===currentTeamId);
   const recap = computeRecap(g);
   document.getElementById('rcTeamName').textContent = (team?team.name:'US').toUpperCase();
@@ -2133,7 +2251,7 @@ function showRecap(gameId, newMilestones){
     sWrap.classList.remove('hidden');
     recap.story.forEach(e=>{
       const p = roster.find(r=>r.id===e.playerId);
-      const who = e.playerId===null || e.type==='opp_goal' ? escapeHtml(g.opponent) : (p?('#'+p.number+' '+escapeHtml(p.name)):'Unknown');
+      const who = e.type==='opp_goal' || e.type==='goal_against' ? escapeHtml(g.opponent) : (e.playerId===null ? 'Team (untracked)' : (p?('#'+p.number+' '+escapeHtml(p.name)):'Unknown'));
       const usGoal = e.type==='goal';
       const sit = (e.situation && e.situation!=='EV') ? ` <span class="event-tag ${e.situation==='PP'?'tag-assist':'tag-penalty'}">${e.situation}</span>` : '';
       const en = e.en ? ' <span class="event-tag tag-goal">EN</span>' : '';
@@ -2145,6 +2263,98 @@ function showRecap(gameId, newMilestones){
   document.getElementById('recapOverlay').scrollTop = 0;
 }
 function closeRecap(){ document.getElementById('recapOverlay').classList.add('hidden'); }
+
+async function openRecapForGame(gid){
+  const all = await storeGet('milestones:'+currentTeamId, settings.sharing, []);
+  showRecap(gid, all.filter(m=>m.gameId===gid));
+}
+
+let currentRecapGameId = null;
+let currentRecapMilestones = [];
+
+function buildShareText(g, milestones){
+  const team = teams.find(t=>t.id===currentTeamId);
+  const recap = computeRecap(g);
+  const result = g.teamScore>g.oppScore ? 'W' : g.teamScore<g.oppScore ? 'L' : 'T';
+  const lines = [];
+  lines.push(`${team?team.name:'Us'} ${g.teamScore}, ${g.opponent} ${g.oppScore} (${result}) — ${g.date}`);
+  if(recap.lines.length){
+    lines.push('');
+    recap.lines.slice(0,6).forEach(l=>{
+      lines.push(`#${l.p.number} ${l.p.name}: ${l.goal}G ${l.assist}A${l.shot?` · ${l.shot} SOG`:''}`);
+    });
+  }
+  recap.goalieLines.forEach(l=>{
+    const svp = l.svp===null?'':` (${'.'+String(Math.round(l.svp*1000)).padStart(3,'0')})`;
+    lines.push(`🥅 #${l.p.number} ${l.p.name}: ${l.shot_against} saves, ${l.goal_against} GA${svp}`);
+  });
+  if(milestones && milestones.length){
+    lines.push('');
+    milestones.forEach(m=> lines.push(`${m.icon} ${m.title} — ${m.text}`));
+  }
+  lines.push('');
+  lines.push('Tracked with RinkSide');
+  return lines.join('\n');
+}
+
+async function fixScore(side, delta){
+  const g = games.find(x=>x.id===currentRecapGameId);
+  if(!g) return;
+  const type = side==='team' ? 'goal' : 'opp_goal';
+  if(delta > 0){
+    g.events.push({ id: uid(), playerId: null, type, period:'P3', situation:'EV', en:false, ts: Date.now(), corrected:true });
+  } else {
+    let i = g.events.length-1;
+    for(; i>=0; i--){
+      const e = g.events[i];
+      if(side==='team' ? (e.type==='goal' && e.playerId===null) : (e.type==='opp_goal' || e.type==='goal_against')) break;
+    }
+    if(i<0){ showToast(side==='team' ? 'Only tracked player goals remain. Remove those from the event log if needed.' : 'No opponent goals to remove.'); return; }
+    g.events.splice(i,1);
+  }
+  recomputeScores(g);
+  await storeSet('games:'+currentTeamId, games, settings.sharing);
+  showRecap(g.id, currentRecapMilestones);
+  document.getElementById('rcFixScore').open = true;
+  renderGames(); renderStats(); renderLive(); updateScoreboard();
+}
+
+async function shareRecap(){
+  const g = games.find(x=>x.id===currentRecapGameId);
+  if(!g) return;
+  const text = buildShareText(g, currentRecapMilestones);
+  try{
+    if(navigator.share){
+      await navigator.share({ title: `vs ${g.opponent} — ${g.teamScore}-${g.oppScore}`, text });
+      dbg('SHARE: native share used');
+      return;
+    }
+  }catch(e){ if(e && e.name==='AbortError') return; }
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Recap copied — paste it into a text or group chat.');
+  }catch(e){
+    showToast('Could not open share on this device.');
+  }
+}
+
+async function recapEventLog(){
+  const gid = currentRecapGameId;
+  closeRecap();
+  await openGameDetail(gid);
+}
+
+async function recapDelete(){
+  const gid = currentRecapGameId;
+  const ok = await customConfirm('Delete this game and all of its stats? This can\'t be undone.');
+  if(!ok) return;
+  await storeDelete('events:'+gid, settings.sharing);
+  games = games.filter(g=>g.id!==gid);
+  await storeSet('games:'+currentTeamId, games, settings.sharing);
+  closeRecap();
+  renderGames(); renderStats(); renderLive(); updateScoreboard();
+  showToast('Game deleted.');
+}
 
 /* ---------------- Stats ---------------- */
 function computeSeasonStats(){
@@ -2174,30 +2384,22 @@ function computeSeasonStats(){
 
 let statsSortKey = 'points';
 let statsSortDir = -1;
-let playerSortMode = 'num_asc'; // num_asc | num_desc | name_asc | name_desc
 let gSortKey = 'sv';
 let gSortDir = -1;
 
 function sortStats(key){
-  if(key==='name'){
-    if(statsSortKey!=='name'){ statsSortKey='name'; playerSortMode='num_asc'; }
-    else {
-      const order = ['num_asc','num_desc','name_asc','name_desc'];
-      playerSortMode = order[(order.indexOf(playerSortMode)+1) % order.length];
-    }
-  } else {
-    if(statsSortKey===key) statsSortDir *= -1; else { statsSortKey = key; statsSortDir = -1; }
+  if(statsSortKey===key){ statsSortDir *= -1; }
+  else {
+    statsSortKey = key;
+    // numbers/names read naturally ascending first; stat columns descending first
+    statsSortDir = (key==='num' || key==='pname') ? 1 : -1;
   }
   renderStats();
 }
 function sortGoalies(key){
-  if(gSortKey===key) gSortDir *= -1; else { gSortKey = key; gSortDir = -1; }
+  if(gSortKey===key){ gSortDir *= -1; }
+  else { gSortKey = key; gSortDir = (key==='gnum' || key==='gname') ? 1 : -1; }
   renderStats();
-}
-function playerHeaderLabel(){
-  if(statsSortKey!=='name') return 'Player';
-  return { num_asc:'Player <span class="sort-arrow"># ▲</span>', num_desc:'Player <span class="sort-arrow"># ▼</span>',
-           name_asc:'Player <span class="sort-arrow">A ▲</span>', name_desc:'Player <span class="sort-arrow">A ▼</span>' }[playerSortMode];
 }
 
 /* Deterministic insight cards — priority-ranked rules, no AI (per Phase Zero) */
@@ -2268,34 +2470,31 @@ async function renderStats(){
   const all = computeSeasonStats();
   const rows = all.filter(r=>r.player.position!=='G');
   const goalies = all.filter(r=>r.player.position==='G');
-  if(statsSortKey==='name'){
-    rows.sort((a,b)=>{
-      if(playerSortMode==='num_asc') return Number(a.player.number)-Number(b.player.number);
-      if(playerSortMode==='num_desc') return Number(b.player.number)-Number(a.player.number);
-      if(playerSortMode==='name_asc') return a.player.name.localeCompare(b.player.name);
-      return b.player.name.localeCompare(a.player.name);
-    });
+  if(statsSortKey==='num'){
+    rows.sort((a,b)=> (Number(a.player.number)-Number(b.player.number)) * statsSortDir );
+  } else if(statsSortKey==='pname'){
+    rows.sort((a,b)=> a.player.name.localeCompare(b.player.name) * statsSortDir );
   } else {
     rows.sort((a,b)=> ((a[statsSortKey]||0)-(b[statsSortKey]||0)) * statsSortDir );
   }
 
   const level = settings.statLevel;
-  const cols = [{key:'name', label:'Player'}, {key:'gp', label:'GP'}, {key:'goal', label:'G'}, {key:'assist', label:'A'}, {key:'points', label:'PTS'}, {key:'p_gp', label:'P/GP'}];
+  const cols = [{key:'num', label:'#'}, {key:'pname', label:'Player'}, {key:'gp', label:'GP'}, {key:'goal', label:'G'}, {key:'assist', label:'A'}, {key:'points', label:'PTS'}, {key:'p_gp', label:'P/GP'}];
   if(level==='standard' || level==='full'){ cols.push({key:'shot', label:'SOG'}, {key:'penalty', label:'PIM'}, {key:'ppg', label:'PPG'}, {key:'ppp', label:'PPP'}, {key:'shg', label:'SHG'}, {key:'eng', label:'ENG'}); }
   if(level==='full'){ cols.push({key:'faceoff_won', label:'FOW'}, {key:'faceoff_lost', label:'FOL'}, {key:'hit', label:'HIT'}, {key:'block', label:'BLK'}); }
 
   let html = '<table class="stats-table"><thead><tr>';
   cols.forEach(c=>{
     const active = statsSortKey===c.key;
-    const label = c.key==='name' ? playerHeaderLabel()
-      : c.label + (active ? `<span class="sort-arrow">${statsSortDir===-1?'▼':'▲'}</span>` : '');
+    const label = c.label + (active ? `<span class="sort-arrow">${statsSortDir===-1?'▼':'▲'}</span>` : '');
     html += `<th class="${active?'sorted':''}" onclick="sortStats('${c.key}')">${label}</th>`;
   });
   html += '</tr></thead><tbody>';
   rows.forEach(r=>{
     html += '<tr>';
     cols.forEach(c=>{
-      if(c.key==='name') html += `<td>#${r.player.number} ${escapeHtml(r.player.name)}</td>`;
+      if(c.key==='num') html += `<td>${r.player.number}</td>`;
+      else if(c.key==='pname') html += `<td>${escapeHtml(r.player.name)}</td>`;
       else if(c.key==='p_gp') html += `<td>${r.gp ? r.p_gp.toFixed(2) : '—'}</td>`;
       else html += `<td>${r[c.key]}</td>`;
     });
@@ -2313,9 +2512,11 @@ async function renderStats(){
       const sa = r.shot_against + r.goal_against;
       return { ...r, sa, sv: r.shot_against, svp: sa ? r.shot_against/sa : -1 };
     });
-    const gCols = [{key:'gname', label:'Goalie'}, {key:'gp', label:'GP'}, {key:'sa', label:'SA'}, {key:'sv', label:'SV'}, {key:'goal_against', label:'GA'}, {key:'svp', label:'SV%'}];
-    if(gSortKey==='gname'){
-      gRows.sort((a,b)=> a.player.name.localeCompare(b.player.name) * -gSortDir );
+    const gCols = [{key:'gnum', label:'#'}, {key:'gname', label:'Goalie'}, {key:'gp', label:'GP'}, {key:'sa', label:'SA'}, {key:'sv', label:'SV'}, {key:'goal_against', label:'GA'}, {key:'svp', label:'SV%'}];
+    if(gSortKey==='gnum'){
+      gRows.sort((a,b)=> (Number(a.player.number)-Number(b.player.number)) * gSortDir );
+    } else if(gSortKey==='gname'){
+      gRows.sort((a,b)=> a.player.name.localeCompare(b.player.name) * gSortDir );
     } else {
       gRows.sort((a,b)=> ((a[gSortKey]||0)-(b[gSortKey]||0)) * gSortDir );
     }
@@ -2328,7 +2529,7 @@ async function renderStats(){
     gh += '</tr></thead><tbody>';
     gRows.forEach(r=>{
       const svpTxt = r.svp<0?'—':'.'+String(Math.round(r.svp*1000)).padStart(3,'0');
-      gh += `<tr><td>#${r.player.number} ${escapeHtml(r.player.name)}</td><td>${r.gp}</td><td>${r.sa}</td><td>${r.sv}</td><td>${r.goal_against}</td><td>${svpTxt}</td></tr>`;
+      gh += `<tr><td>${r.player.number}</td><td>${escapeHtml(r.player.name)}</td><td>${r.gp}</td><td>${r.sa}</td><td>${r.sv}</td><td>${r.goal_against}</td><td>${svpTxt}</td></tr>`;
     });
     gh += '</tbody></table>';
     gWrap.innerHTML = gh;
@@ -2351,7 +2552,7 @@ function renderGames(){
     const rc = result==='W'?'result-w':result==='L'?'result-l':'result-t';
     const div = document.createElement('div');
     div.className = 'game-card';
-    div.onclick = ()=>openGameDetail(g.id);
+    div.onclick = ()=>openRecapForGame(g.id);
     div.innerHTML = `<div class="game-top">
         <span class="game-opp">vs ${escapeHtml(g.opponent)}</span>
         <span class="game-score">${g.teamScore}–${g.oppScore}</span>
@@ -2376,7 +2577,7 @@ async function openGameDetail(gameId){
     let html = '';
     evs.slice().reverse().forEach(ev=>{
       const p = roster.find(r=>r.id===ev.playerId);
-      const who = ev.playerId===null ? 'Opponent' : (p ? '#'+p.number+' '+escapeHtml(p.name) : '#? Unknown');
+      const who = ev.playerId===null ? (ev.type==='opp_goal' ? 'Opponent' : 'Team (untracked player)') : (p ? '#'+p.number+' '+escapeHtml(p.name) : '#? Unknown');
       const sit = (ev.situation && ev.situation!=='EV') ? `<span class="event-tag ${ev.situation==='PP'?'tag-assist':'tag-penalty'}">${ev.situation}</span>` : '';
       const enb = ev.en ? '<span class="event-tag tag-goal">EN</span>' : '';
       html += `<div class="event-item"><span class="event-tag ${statTagClass(ev.type)}">${statLabel(ev.type)}</span>${sit}${enb}<span>${who}</span><span style="color:var(--ice-dim); font-size:11px; margin-left:auto;">${ev.period}</span></div>`;
